@@ -1,0 +1,29 @@
+Sustainable Energy and the GDP
+========================================================
+author: Grant Esparza, Eduardo Gomez, Dylan Gouthro
+date: March 16, 2018
+autosize: true
+
+Overview
+========================================================
+
+- What are we trying to analyze?
+- Why?
+
+Variables
+========================================================
+
+- Which variables are we looking at and why?
+```{r}
+summary(cars)
+```
+
+Plot the data
+========================================================
+
+```{r, echo=FALSE}
+plot(cars)
+```
+
+Which model will we use
+========================================================
