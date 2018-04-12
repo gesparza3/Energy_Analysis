@@ -1,3 +1,5 @@
+## GDP data from Bureau of Economic Analysis
+
 ###############################################################################
 
 # Read libraries
@@ -7,20 +9,26 @@ library(dplyr)
 ###############################################################################
 
 ## read in data for the U.S. and GDP
-energy.data <- read.csv("/home/gesparza/Downloads/use_US.csv")
-gdp.data <- read.csv("/home/gesparza/Dropbox/MATH456/Energy/GDP.csv")
+energy.data <- read.csv("~/Energy_Analysis/data/use_all_btu.csv")
 
 ###############################################################################
 
-## Combine quaters to make it yearly
-year <- 1
-gdp <- data.frame(Year=numeric(), GDPI=numeric(), stringsAsFactors=FALSE) 
-for(i in 1:71)
-{
-  gdp[i,1] <- i + 1946
-  gdp[i,2] <- sum(gdp.data[year:year+4,2])
-  year <- year + 4
-}
+## Clean GDP
+gdp1 <- read.csv("~/Energy_Analysis/data/gdpstate_naics_all_R.csv")
+ 
+## Select total GDP
+gdp1 <- gdp1[gdp1$Description %in% "All industry total",]
+
+## Select only the states and years
+gdp1 <- gdp1[c(2:8,10:52),]
+gdp1 <- gdp1[c(2,9:27)]
+
+## Convert to long
+gdp <- gdp1 %>% gather(GeoName, year, X1997:X2015)
+names(gdp) <- c("State", "Year", "GDP")
+gdp$Year <- gsub("X", "", gdp$Year)
+gdp$Year <- as.numeric(gdp$Year)
+gdp$GDP <- as.numeric(gdp$GDP)
 
 ###############################################################################
 
@@ -65,19 +73,31 @@ usa.energy <- mutate(usa.energy, natural_gas.growth = (round(NGTCB/lag(NGTCB, 1)
 usa.energy <- mutate(usa.energy, solar.growth = (round(SOTCB/lag(SOTCB, 1), 2)))
 ## Wind rate of growth
 usa.energy <- mutate(usa.energy, wind.growth = (round(WYTCB/lag(WYTCB, 1), 2)))
-## GDP rate of growth
-usa.energy$GDPI <- gdp[14:69,2]
-usa.energy <- mutate(usa.energy, GDP.growth = (round(GDPI/lag(GDPI, 1), 2)))
 
 ## Tranform year variable
 usa.energy$year <- gsub("X", "", usa.energy$year)
 usa.energy$year <- as.numeric(usa.energy$year)
+
+## Select 1997-2015
+usa.energy <- usa.energy[usa.energy$year %in% c(1997:2015),]
+
+## Remove US and Data Status
+usa.energy <- filter(usa.energy, State != "US")
+usa.energy <- filter(usa.energy, State != "DC")
+usa.energy <- usa.energy[,2:19]
+
+## Add GDP
+usa.energy$GDP <- gdp[,3]
+usa.energy <- mutate(usa.energy, GDP.growth = (round(GDP/lag(GDP, 1), 2)))
+
+## Make State a factor
 
 ###############################################################################
 
 ## Replace NA's with 0's
 usa.energy[is.na(usa.energy)] <- 0
 usa.energy[sapply(usa.energy, simplify = 'matrix', is.infinite)] <- 0
+usa.energy[,20] <- as.data.frame(ifelse(usa.energy[,20] > 1.03, 1, 0))
 
 ## Write to csv
-write.csv(usa.energy, "~/Energy_Analysis/data/usa_energy.csv")
+write.csv(usa.energy, "~/Energy_Analysis/data/usa_states_energy.csv")
