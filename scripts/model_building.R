@@ -19,11 +19,11 @@ states.energy$GDP.growth <- as.factor(states.energy$GDP.growth)
 ## GLM
 
 ## Partial Pooling
-glm.model <- glmer(GDP.growth ~ hydro.growth + (1 | State),
+glm.model <- glmer(GDP.growth ~ hydro.growth + (hydro.growth | State),
                family=binomial("logit"), data=states.energy)
 
 ## Make sjPlot for random effects
-plot_model(glm.model, type="re", y.offset = .4)
+sjp.glmer(glm.model, type="rs.ri", y.offset = .4)
 
 ## Make sjPlot for fixed effects
 sjp.glmer(glm.model, type="fe", y.offset = .4)
@@ -48,15 +48,16 @@ sjp.glmer(contin.model, type="fe", y.offset = .4)
 ################################################################################
 
 ## Plot GDP
-ggplot(states.energy, aes(x=GDP, fill=State)) + geom_bar() +
+ggplot(states.energy, aes(x=GDP.growth, fill=State)) + geom_bar() +
   coord_flip() + theme(legend.position = 'none')
 
 ## Plot GDP.growth
 ggplot(states.energy, aes(State, fill=GDP.growth)) + geom_bar() + coord_flip()
 
 ## Plot hydro.growth
+newer <- filter(states.energy, states.energy$State == "AK")
 ggplot(states.energy, aes(log(hydro.growth))) + geom_histogram()
 
-## 
-ggplot(states.energy, aes(x=State, y=log(coal.growth), fill=State)) + 
-  geom_boxplot() + coord_flip() + theme(legend.position = 'none')
+## Plot Coal.growth
+ggplot(states.energy, aes(x=hydro.growth, fill=State)) + 
+  geom_density() + facet_wrap(~State) + theme(legend.position = 'none')

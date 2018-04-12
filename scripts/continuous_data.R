@@ -8,7 +8,7 @@ library(ggplot2)
 ###############################################################################
 
 ## read in data
-usa.energy <- read.csv("~/Energy_Analysis/data/usa_energy.csv")
+usa.energy <- read.csv("~/Energy_Analysis/data/usa_states_energy.csv")
 
 ###############################################################################
 

@@ -20,7 +20,7 @@ energy.pg <- select(usa.energy, c("year", "coal.growth", "fossil_fuel.growth",
 
 ## Make GDP binary
 energy.pg[,10] <- as.data.frame(ifelse(energy.pg[,10] > 1.013, 1, 0))
-energy.pg[,10] <- lapply(energy.pg[,10], as.factor)
+energy.pg[,10] <- as.factor(energy.pg[,10])
 
 ###############################################################################
 
