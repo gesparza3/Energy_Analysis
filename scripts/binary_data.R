@@ -41,7 +41,7 @@ best.mods@formulas
 ## Run the model
 mod <- glm(GDP.growth ~ motor_gas.growth, data = energy.binary, family = "binomial")
 summary(mod)
-MKmisc::HLgof.test(fit = fitted(mod.1), obs = mod.1$y)
+MKmisc::HLgof.test(fit = fitted(mod), obs = mod$y)
 
 ###############################################################################
 
