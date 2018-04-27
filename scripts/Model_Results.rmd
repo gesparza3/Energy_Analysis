@@ -1,0 +1,136 @@
+---
+title: Model Results for GDP ~ Energy
+author: Grant Esparza
+date: "4/26/2018"
+---
+
+```{r}
+
+## Libraries used
+library(lme4)
+library(sjPlot)
+library(dplyr)
+library(ggplot2)
+
+```
+
+```{r}
+
+#Read data
+states.energy <- read.csv("~/Energy_Analysis/data/usa_states_energy.csv")
+usa.energy <- read.csv("~/Energy_Analysis/data/usa_energy.csv")
+
+## Clean it up a little
+states.energy <- states.energy %>% select(c(year, State, CLTCB, FFTCB, GETCB, HYTCB,
+                                          MGTCB, NGTCB, SOTCB, WYTCB, GDP,
+                                          GDP.total))
+names(states.energy)[11] <- "GDP.state"
+states.energy$GDP.total.growth <- ifelse(usa.energy[38:56, 22] > 1.03,
+                                         1,0)
+
+names(states.energy)
+
+```
+
+**Some plotting showed that in order to keep these variables on the same scale
+as GDP, I needed to use a log transformation. Since all variables are transformed
+the analysis should be valid.**
+
+```{r, fig.width=5, fig.height=5, fig.align='center'}
+
+## Perform a log transformation on all variables
+for (i in 1:8){
+    states.energy[, i+2] <- log(states.energy[,i+2] + 1)
+}
+states.energy$GDP.total <- log(states.energy$GDP.total)
+states.energy$GDP.state <- log(states.energy$GDP.state)
+
+```
+
+**After constant tweaking I'm pretty much in the same place in regards to the 
+random intercept model. I talked to Edward about my model a little bit and he
+was also at a loss as to why the variance for the random intercept would be 
+equal to zero. This happens when including the intercept (_see no '-1'_).
+
+However when removing the intercept, we get meaningful results that seem to 
+reflect what I've been able to generate in plots(_see the density plots at the
+end_.) Edward says this could be a failing of frequentist statistics, and that 
+for now we should run with _log(GDP.state) ~ -1 + log(HYTCB) + (1|State)_. We
+should ask Robin about this tomorrow.**
+
+```{r, fig.width=5, fig.height=5, fig.align='center'}
+
+## Partial Pooling
+contin.model.intercept <- lmer(GDP.state ~ HYTCB + (1 | State),
+                                data=states.energy)
+
+
+contin.model.no_intercept <- lmer(GDP.state ~ -1 + HYTCB +
+                                  (1 | State), data=states.energy)
+
+
+## Make sjPlot for random effects
+plot_model(contin.model.intercept, sort.est="(Intercept)", type="re",
+           y.offset=.4)
+
+plot_model(contin.model.intercept, sort.est="(Intercept)", type="re", 
+           y.offset=.4)
+
+summary(contin.model.intercept)
+summary(contin.model.no_intercept)
+
+```
+
+**As you can see in the plots below, HYTCB seems to be a prevelant contributor
+compared to other states. This reflects what the random intercept model shows us
+in the previous sjPlot. Another apparent feature of these graphs is the overwhelming
+domination of nonrewnewable sources...but we already could have guessed that 
+coming in.**
+
+```{r, fig.width=7, fig.height=7, fig.align='center'}
+
+ggplot(states.energy) +
+  geom_density(aes(x=CLTCB), fill="black", alpha=.5) +
+  geom_density(aes(x=FFTCB), fill="brown", alpha=.5) + 
+  geom_density(aes(x=GETCB), fill="green", alpha=.5) +
+  geom_density(aes(x=HYTCB), fill="blue", alpha=.5) +
+  geom_density(aes(x=MGTCB), fill="gray", alpha=.5) +
+  geom_density(aes(x=NGTCB), fill="yellow", alpha=.5) +
+  geom_density(aes(x=SOTCB), fill="orange", alpha=.5) +
+  geom_density(aes(x=WYTCB), fill="light blue", alpha=.5) +
+  facet_wrap(~State)
+
+```
+
+**I also went ahead and ran a factor analysis to see if nonrewnewable and 
+renewable energy ended up in distinct groups or "factors". At least in regards
+to their total consumption the plot below shows some pretty distinct grouping.**
+
+```{r, fig.width=5, fig.height=5, fig.align='center'}
+
+# Factor Analysis
+library(corrplot)
+library(psych)
+
+states.dat <- states.energy %>% select(c(CLTCB, FFTCB, GETCB, HYTCB, MGTCB,
+                                         NGTCB, SOTCB, WYTCB))
+
+extract_pca <- princomp(states.dat, cor=TRUE)
+var_pc <- (extract_pca$sdev)^2
+qplot(x=1:length(var_pc), y=var_pc, geom=c("point", "line")) +
+    xlab("PC number") + ylab("Eigenvalue")
+
+pc.model.oblimin <- principal(states.dat, nfactors=2, rotate="oblimin",
+                              scores=TRUE)
+print(pc.model.oblimin)
+
+load <- pc.model.oblimin$loadings
+plot(load, type="n")
+text(load, labels=rownames(load))
+
+```
+
+**All in all, if we can run with the second variation of the random intercept 
+model we can come up with some decent results. If Robin says we can't use it 
+I still have the tables from the for loops running lm on each energy source but
+I realllllly don't like how those turned out. 

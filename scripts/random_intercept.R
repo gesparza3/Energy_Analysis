@@ -4,6 +4,9 @@
 ## Load libraries
 library(lme4)
 library(sjPlot)
+library(dplyr)
+library(ggplot2)
+library(car)
 
 ################################################################################
 
@@ -13,42 +16,85 @@ usa.energy <- read.csv("~/Energy_Analysis/data/usa_energy.csv")
 
 ################################################################################
 
-## Add US GDP variables
+states.energy <- states.energy %>% select(c(year, State, CLTCB, FFTCB, GETCB, HYTCB,
+                                          MGTCB, NGTCB, SOTCB, WYTCB, GDP,
+                                          GDP.total))
+names(states.energy)[11] <- "GDP.state"
+states.energy$GDP.total.growth <- ifelse(usa.energy[38:56, 22] > 1.03,
+                                         1,0)
+
+names(states.energy)
+#  [1] "year"      "State"     "CLTCB"     "FFTCB"     "GETCB"    
+#  [6] "HYTCB"     "MGTCB"     "NGTCB"     "SOTCB"     "WYTCB"    
+# [11] "GDP.state" "GDP"      
 
 ################################################################################
 
+## Create renewable vs non renewable
+states.energy$renewable <- rowSums(states.energy %>% 
+                                   select(HYTCB, SOTCB, WYTCB, GETCB))
+states.energy$non_renewable <- rowSums(states.energy %>% 
+                                   select(CLTCB, FFTCB, MGTCB, NGTCB))
+
 ## Model
-summary(lm(GDP.total~HYTCB, data=states.energy[states.energy$State == "WA",]))
+# summary(lm(GDP.total~HYTCB, data=states.energy[states.energy$State == "WA",]))
+
+## Take the log of each variable
+for (i in 1:8){
+    states.energy[, i+2] <- log(states.energy[,i+2] + 1)
+}
+states.energy$GDP.total <- log(states.energy$GDP.total)
+states.energy$GDP.state <- log(states.energy$GDP.state)
+states.energy$non_renewable <- log(states.energy$non_renewable)
+states.energy$renewable <- log(states.energy$renewable)
 
 ## Partial Pooling
-contin.model <- lmer(log(GDP.total) ~ -1 + CLTCB + HYTCB + (1 | State), data=states.energy)
+contin.model <- lmer(GDP.state ~ -1 + renewable + non_renewable + (1 | State), 
+                     data=states.energy)
 
 ## Make sjPlot for random effects
 plot_model(contin.model, sort.est="(Intercept)", type="re", y.offset=.4)
 
 ## Make sjPlot for fixed effects
-sjp.glmer(contin.model, type="fe", y.offset = .4)
+plot_model(contin.model, type="est", y.offset = .4)
 
 ################################################################################
 
-## Plot GDP
-ggplot(states.energy, aes(x=GDP.total, fill=State)) + geom_bar() +
-  coord_flip() + theme(legend.position = 'none')
+## Plot 
+ggplot(states.energy) +
+  geom_density(aes(x=CLTCB), fill="black", alpha=.5) +
+  geom_density(aes(x=FFTCB), fill="brown", alpha=.5) + 
+  geom_density(aes(x=GETCB), fill="green", alpha=.5) +
+  geom_density(aes(x=HYTCB), fill="blue", alpha=.5) +
+  geom_density(aes(x=MGTCB), fill="gray", alpha=.5) +
+  geom_density(aes(x=NGTCB), fill="yellow", alpha=.5) +
+  geom_density(aes(x=SOTCB), fill="orange", alpha=.5) +
+  geom_density(aes(x=WYTCB), fill="light blue", alpha=.5) +
+  facet_wrap(~State)
 
-## Plot GDP.growth
-ggplot(states.energy, aes(State, fill=GDP.growth)) + geom_bar() + coord_flip()
+################################################################################
 
-## Plot hydro.growth
-ggplot(states.energy, aes(HYTCB, log(GDP.total), color=State)) +
-    geom_point(size = 5) +
-    geom_smooth(aes(color=State), se=FALSE)
+# Factor Analysis
+library(corrplot)
+library(psych)
 
-## Data selected by state
-newer <- filter(states.energy, states.energy$State == "MO")
+states.dat <- states.energy %>% select(c(CLTCB, FFTCB, GETCB, HYTCB, MGTCB,
+                                         NGTCB, SOTCB, WYTCB, GDP.state))
 
-ggplot(states.energy, aes(log(hydro.growth), GDP)) + geom_point() +
-    geom_smooth(aes(color=State), se=FALSE)
+extract_pca <- princomp(states.dat, cor=TRUE)
+var_pc <- (extract_pca$sdev)^2
+qplot(x=1:length(var_pc), y=var_pc, geom=c("point", "line")) +
+    xlab("PC number") + ylab("Eigenvalue")
 
-## Plot Coal.growth
-ggplot(states.energy, aes(x=hydro.growth, fill=State)) +
-  geom_density() + facet_wrap(~State) + theme(legend.position = 'none')
+pc.model.oblimin <- principal(states.dat, nfactors=2, rotate="oblimin",
+                              scores=TRUE)
+print(pc.model.oblimin)
+
+load <- pc.model.oblimin$loadings
+plot(load, type="n")
+text(load, labels=rownames(load))
+
+
+#####
+
+_
