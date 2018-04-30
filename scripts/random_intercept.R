@@ -6,7 +6,6 @@ library(lme4)
 library(sjPlot)
 library(dplyr)
 library(ggplot2)
-library(car)
 
 ################################################################################
 
@@ -52,11 +51,20 @@ states.energy$renewable <- log(states.energy$renewable)
 contin.model <- lmer(GDP.state ~ -1 + renewable + non_renewable + (1 | State), 
                      data=states.energy)
 
+contin.model1 <- lmer(GDP.state ~ -1 + CLTCB + FFTCB + MGTCB + NGTCB+
+                      GETCB + HYTCB + SOTCB + WYTCB + (1 | State), 
+                     data=states.energy)
+
+
 ## Make sjPlot for random effects
-plot_model(contin.model, sort.est="(Intercept)", type="re", y.offset=.4)
+plot_model(contin.model1, sort.est="(Intercept)", type="re", y.offset=.4)
 
 ## Make sjPlot for fixed effects
 plot_model(contin.model, type="est", y.offset = .4)
+
+sjt.lm(contin.model1, show.r2 = FALSE) 
+
+knitr::kable(contin.model1)
 
 ################################################################################
 
@@ -94,7 +102,5 @@ load <- pc.model.oblimin$loadings
 plot(load, type="n")
 text(load, labels=rownames(load))
 
-
-#####
-
-_
+ggplot(states.energy, aes(HTYCB, GDP.state)) + 
+    geom_point()

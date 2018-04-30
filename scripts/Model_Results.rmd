@@ -58,6 +58,7 @@ end_.) Edward says this could be a failing of frequentist statistics, and that
 for now we should run with _log(GDP.state) ~ -1 + log(HYTCB) + (1|State)_. We
 should ask Robin about this tomorrow.**
 
+
 ```{r, fig.width=5, fig.height=5, fig.align='center'}
 
 ## Partial Pooling
@@ -68,16 +69,42 @@ contin.model.intercept <- lmer(GDP.state ~ HYTCB + (1 | State),
 contin.model.no_intercept <- lmer(GDP.state ~ -1 + HYTCB +
                                   (1 | State), data=states.energy)
 
+summary(contin.model.intercept)
 
 ## Make sjPlot for random effects
 plot_model(contin.model.intercept, sort.est="(Intercept)", type="re",
            y.offset=.4)
 
-plot_model(contin.model.intercept, sort.est="(Intercept)", type="re", 
+plot_model(contin.model.no_intercept, sort.est="(Intercept)", type="re", 
            y.offset=.4)
 
-summary(contin.model.intercept)
 summary(contin.model.no_intercept)
+
+contin.model1 <- lmer(GDP.state ~ -1 + CLTCB + FFTCB + MGTCB + NGTCB+
+                      GETCB + HYTCB + SOTCB + WYTCB + (1 | State), 
+                     data=states.energy)
+plot_model(contin.model1, sort.est="(Intercept)", type="re", 
+           y.offset=.4)
+
+summary(contin.model1)
+
+states.energy$renewable <- rowSums(states.energy %>% 
+                                   select(HYTCB, SOTCB, WYTCB, GETCB))
+states.energy$non_renewable <- rowSums(states.energy %>% 
+                                   select(CLTCB, FFTCB, MGTCB, NGTCB))
+
+
+states.energy$non_renewable <- log(states.energy$non_renewable)
+states.energy$renewable <- log(states.energy$renewable)
+
+contin.model.type <- lmer(GDP.state ~ -1 + renewable + non_renewable + (1 | State), 
+                     data=states.energy)
+
+plot_model(contin.model.type, sort.est="(Intercept)", type="re", 
+           y.offset=.4)
+
+
+summary(contin.model.type)
 
 ```
 
