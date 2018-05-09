@@ -83,8 +83,12 @@ summary(contin.model.no_intercept)
 contin.model1 <- lmer(GDP.state ~ -1 + CLTCB + FFTCB + MGTCB + NGTCB+
                       GETCB + HYTCB + SOTCB + WYTCB + (1 | State), 
                      data=states.energy)
+
+library(tikzDevice)
+tikz('~/Downloads/random_effects.tex', width=5, height=5, standAlone=FALSE)
 plot_model(contin.model1, sort.est="(Intercept)", type="re", 
            y.offset=.4)
+dev.off()
 
 summary(contin.model1)
 
@@ -152,8 +156,10 @@ pc.model.oblimin <- principal(states.dat, nfactors=2, rotate="oblimin",
 print(pc.model.oblimin)
 
 load <- pc.model.oblimin$loadings
+tikz('~/Downloads/random_effects.tex', width=5, height=5)
 plot(load, type="n")
 text(load, labels=rownames(load))
+dev.off()
 
 ```
 
